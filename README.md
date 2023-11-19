@@ -10,6 +10,6 @@ main.py - python script that creates and outputs a schedule.
     PROPERTY_VALUE - the field value you are looking for.
     DEPARTMENTS_TO_FIND - the list of departments for which the schedule will be downloaded from the sites.
 
-room_8_k_322.json - the json file contains a schedule with the specified field value.
+sought_schedule.json - the json file contains a schedule with the specified field value.
 schedule.json - the json file contains the full schedule of the specified departments.
 schedule.xlsx - xlsx file containing room_8_k_322.json data in xlsx format.
