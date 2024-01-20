@@ -8,11 +8,10 @@ from utils.misc.wait import wait
 
 def add_departments(url: str) -> None:
     """
-    The function gets links to the schedule of institutes and faculties
-    from the website and returns the dictionary {institute: link to schedule}
+    Добавление ссылок на расписания институтов/факультетов.
 
     Arguments:
-        url (str): SSU schedule homepage website URL
+        url (str): URL станицы с расписанием университета
 
     :return: None
     """
@@ -29,5 +28,5 @@ def add_departments(url: str) -> None:
         for i_link, i_department in department_to_link
     ]
     Department.insert_many(departments_info).execute()
-    print("Departments added.")
+    print("Ссылки на расписания институтов/факультетов обновлены.")
     wait()

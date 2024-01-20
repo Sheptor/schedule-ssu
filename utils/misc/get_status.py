@@ -4,7 +4,7 @@ from peewee import fn
 
 
 def get_timer(seconds_count: int) -> Tuple:
-    """ The function recalculates the number of seconds to the h:m:s format """
+    """ Преобразование времени в секундах в формат h:m:s. """
     l_h = seconds_count // 3600
     l_m = (seconds_count - l_h * 3600) // 60
     l_s = seconds_count - (l_h * 3600 + l_m * 60)
@@ -15,6 +15,7 @@ def get_status(
         department_name,
         group_number
 ) -> None:
+    """ Вывод информации о текущем статусе работы программы. """
     min_id = Group.select(fn.min(Group.group_id)).where(Group.department == department_name).scalar()
     current_group = Group.get(Group.department == department_name and Group.group_number == group_number)
     current_id = current_group.group_id

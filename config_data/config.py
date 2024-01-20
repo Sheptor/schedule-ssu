@@ -1,5 +1,8 @@
-from typing import Tuple
+from typing import Tuple, Dict, List
 import re
+
+WRITE_LOGS: bool = False       # True >> Сохранять информацию о работе программы в log-файле
+IS_WRITE_TO_CSW: bool = True   # True >> Сохранить результат поиска в data/<file_name>.csv
 
 ALL_DEPARTMENTS: Tuple = (
     "Биологический факультет", "Географический факультет", "Геологический факультет",
@@ -13,16 +16,21 @@ ALL_DEPARTMENTS: Tuple = (
     "Юридический факультет", "Геологический колледж", "Колледж радиоэлектроники им. П.Н. Яблочкова",
     "Психолого-педагогический факультет", "Факультет математики и естественных наук", "Филологический факультет"
 )
-PROPERTY_TO_FIND: str = "Room"  # "Room" # Acceptable values: "Room", "Teacher", "Name"
-PROPERTY_VALUE: str = r"8 корп. ауд. 322".lower()  # "8 корп. ауд. 322"
-# DEPARTMENTS_TO_FIND("Институт физики",)  #
 
-BASE_URL = "https://www.sgu.ru"
+BASE_URL: str = "https://www.sgu.ru"
 
 DEPARTMENTS_PATTERN = re.compile(r"<li><a href='(.+?)'>(.+?)</a></li>")
 GROUPS_PATTERN = re.compile(r'<a href="(.+?)">(\d{3,4})</a>')
 
-CLASS_TO_TIME = {
+SUB_CLASS_PATTERN = re.compile(r"<div class='l l--t-\d l--r-\d l--g-\d'>(.+?</div></div>.+?)</div></div>")
+EVEN_PATTERN = re.compile(r"alt='Чётность'>(.*?)</div>")
+CLASS_TYPE_PATTERN = re.compile(r"alt='Тип'>(.*?)</div>")
+CLASS_NAME_PATTERN = re.compile(r"<div class='l-dn'>(.*?)</div>")
+TEACHER_NAME_PATTERN = re.compile(r"<div class='l-tn'>(<a href.+?>)?(.*?)(</a>)?</div>")
+ROOM_PATTERN = re.compile(r"<div class='l-p'>(.*?)$")
+OTHER_PATTERN = re.compile(r"alt='Другое'>(.*?)</div>")
+
+CLASS_TO_TIME: Dict = {
     1: "08:20-09:50",
     2: "10:00-11:35",
     3: "12:05-13:40",
@@ -32,3 +40,13 @@ CLASS_TO_TIME = {
     7: "18:45-20:05",
     8: "20:10-21:30",
 }
+
+WEEKDAYS_LIST: List[Dict] = [
+    {"day_name": "Monday"},
+    {"day_name": "Tuesday"},
+    {"day_name": "Wednesday"},
+    {"day_name": "Thursday"},
+    {"day_name": "Friday"},
+    {"day_name": "Saturday"},
+    {"day_name": "Sunday"}
+]

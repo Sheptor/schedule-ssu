@@ -12,15 +12,12 @@ def get_group_schedule(
         department_name: str,
         group_number: str) -> None:
     """
-    The function adds the name of the group schedule file
-    and the group schedule to the schedule dictionary
+    Добавление расписания группы в базу данных.
 
     Arguments:
-        url (str): group schedule website URL
-        department_name (str): name of the institute
-        group_number (str): group number
-        current_group_index (int): index of the group in the entire list
-        group_in_department_index (int): index of the group in the institute list
+        url (str): URL страницы расписания группы
+        department_name (str): Название института/факультета
+        group_number (str): Номер группы
 
     :return: None
     """
