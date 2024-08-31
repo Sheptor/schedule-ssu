@@ -1,6 +1,7 @@
 from typing import Tuple
 from database.init_database import Group
 from peewee import fn
+from utils.misc.init_logger import logger
 
 
 def get_timer(seconds_count: int) -> Tuple:
@@ -27,12 +28,12 @@ def get_status(
     total_groups = Group.select().count()
     total_percent = round((current_id / total_groups) * 100, 2)
 
-    total_time = (total_groups - current_id) * 50
+    total_time = (total_groups - current_id) * 40
     hours, minutes, seconds = get_timer(total_time)
 
-    print(f"saved {department_name} {group_number}"
-          f"\t\t\t{index_in_department}/{total_in_department}"
-          f"({department_percent}%)"
-          f"\t\t\t{current_id}/{total_groups} "
-          f"({total_percent}%)"
-          f"\t\t\ttime left: {hours}h:{minutes}m:{seconds}s")
+    logger.debug(f'Расписание группы "{department_name} {group_number}" получено, '
+                 f'\t\t\t{index_in_department}/{total_in_department} '
+                 f'({department_percent}%)'
+                 f'\t\t\t{current_id}/{total_groups} '
+                 f'({total_percent}%)'
+                 f'\t\t\tосталось времени: {hours}h:{minutes}m:{seconds}s')

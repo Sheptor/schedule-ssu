@@ -1,10 +1,15 @@
+from utils.misc.init_logger import logger
 import requests
-import re
+import sys
+from bs4 import BeautifulSoup
+from peewee import IntegrityError
+
 from utils.misc.get_status import get_status
 from utils.misc.wait import wait
-from config_data.config import (CLASS_TO_TIME, SUB_CLASS_PATTERN, EVEN_PATTERN, CLASS_TYPE_PATTERN, CLASS_NAME_PATTERN,
-                                TEACHER_NAME_PATTERN, ROOM_PATTERN, OTHER_PATTERN)
 from database.init_database import Schedule
+
+
+WEEKDAYS_LIST = ("Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота")
 
 
 def get_group_schedule(
@@ -21,44 +26,88 @@ def get_group_schedule(
 
     :return: None
     """
+    logger.debug(f'Получение расписания группы "{group_number}"...')
 
-    def is_none(var, index=1):
-        if var is not None:
-            return var[index]
-        else:
-            return "---"
-
-    site_text = requests.get(url).text
-
-    for i_day_index, i_day in enumerate(("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"), start=1):
-        pattern = r"<td  id='\d_" + str(i_day_index) + "' class=''>(.*?)</td>"
-        day_list = re.findall(pattern, site_text)
-        for j_lesson_index, j_lesson in enumerate(day_list, start=1):
-            sub_class = re.findall(SUB_CLASS_PATTERN, j_lesson)
-
-            for k_sub_class in sub_class:
-                class_time = CLASS_TO_TIME[j_lesson_index]
-                even = is_none(re.search(EVEN_PATTERN, k_sub_class))
-                class_type = is_none(re.search(CLASS_TYPE_PATTERN, k_sub_class))
-                class_name = is_none(re.search(CLASS_NAME_PATTERN, k_sub_class))
-                teacher = is_none(re.search(TEACHER_NAME_PATTERN, k_sub_class),
-                                  index=2)
-                room = is_none(re.search(ROOM_PATTERN, k_sub_class))
-                other = is_none(re.search(OTHER_PATTERN, k_sub_class))
-                Schedule.create(
-                    day=i_day,
-                    time=class_time,
-                    department_name=department_name,
-                    group_number=group_number,
-                    even=even,
-                    class_type=class_type,
-                    name=class_name,
-                    teacher_name=teacher,
-                    room=room,
-                    other=other
+    try:
+        response = requests.get(url, timeout=15)
+        if response.status_code != 200:
+            logger.error(f"Ошибка получения ответа от сервера. Код ошибки: {response.status_code}.")
+            wait()
+            wait()
+            response = requests.get(url, timeout=15)
+            if response.status_code != 200:
+                logger.critical(
+                    f"После повторной отправки запроса, также возникла ошибка. Код ошибки: {response.status_code}."
                 )
-    get_status(
-        department_name=department_name,
-        group_number=group_number)
+                raise Exception
+
+    except requests.exceptions.Timeout:
+        logger.error(f"Превышено время ожидания ответа от сервера.")
+        wait()
+        wait()
+        try:
+            response = requests.get(url, timeout=15)
+            if response.status_code != 200:
+                logger.critical(
+                    f"После повторной отправки запроса, возникла ошибка. Код ошибки: {response.status_code}."
+                )
+                sys.exit(1)
+        except requests.exceptions.Timeout:
+            logger.critical(
+                f"После повторной отправки запроса, время ожидания также было превышено."
+            )
+            sys.exit(1)
+
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    group_schedule = []
+    rows = soup.find_all("tr")
+    for i_row in rows:
+        time = i_row.find("div", {"class": "schedule-table__header"})
+        if time is not None:
+            time = time.text.strip().replace(" ", "").replace("\n\n", " - ")
+            for j_index, j_lesson in enumerate(i_row.find_all("td")):
+                for j_sub_lesson in j_lesson.find_all("div", {"class": "schedule-table__lesson"}):
+                    properties = j_sub_lesson.find("div", {"class": "schedule-table__lesson-props"}).find_all("div")
+                    practice = properties[0].text.strip()
+                    if len(properties) == 2:
+                        num = properties[1].text.strip()
+                    else:
+                        num = "Ч/З"
+                    name = j_sub_lesson.find("div", {"class": "schedule-table__lesson-name"}).text.strip()
+                    teacher = j_sub_lesson.find("div", {"class": "schedule-table__lesson-teacher"}).text.strip()
+                    room = j_sub_lesson.find("div", {"class": "schedule-table__lesson-room"}).text.strip()
+                    other = j_sub_lesson.find("div", {"class": "schedule-table__lesson-uncertain"}).text.strip()
+                    if other == "":
+                        other = None
+                    group_schedule.append(
+                        {
+                            "weekday": WEEKDAYS_LIST[j_index],
+                            "time": time,
+                            "practice": practice,
+                            "num": num,
+                            "name": name,
+                            "teacher": teacher,
+                            "groups": group_number,
+                            "room": room,
+                            "other": other,
+                            "weekday_id": j_index
+                        }
+                    )
+
+    for i_lesson in group_schedule:
+        try:
+            Schedule.insert(i_lesson).execute()
+        except IntegrityError:
+            Schedule.update(
+                groups=Schedule.groups + ", " + i_lesson["groups"]
+            ).where(
+                Schedule.weekday == i_lesson["weekday"],
+                Schedule.time == i_lesson["time"],
+                Schedule.num == i_lesson["num"],
+                Schedule.teacher == i_lesson["teacher"],
+                not Schedule.groups.like(f"%{group_number}%")
+            ).execute()
+    get_status(department_name=department_name, group_number=group_number)
     wait()
 

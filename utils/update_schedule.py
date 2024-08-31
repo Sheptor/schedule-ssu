@@ -1,45 +1,67 @@
-from config_data.config import BASE_URL
-from database.init_database import Schedule, Department, Group
-from utils.updade_database.add_departments import add_departments
-from utils.updade_database.add_groups import add_groups
+from bs4 import BeautifulSoup
+from selenium import webdriver
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC  # noqa
+from selenium.webdriver.common.by import By
+from selenium.common.exceptions import TimeoutException
+
+from . import DEPARTMENTS_IN_INDEX
+from database.init_database import Schedule, Group
 from utils.updade_database.get_group_schedule import get_group_schedule
-from utils.misc.log_writer import add_log
-
-from typing import Tuple
+from utils.misc.init_logger import logger
 
 
-def update_schedule(departments_to_update: Tuple, update_links: bool = False, is_full_update: bool = True) -> None:
+BASE_URL: str = "https://www.sgu.ru"
+
+
+# ####################################################################################
+def update_links():
+    """
+    Обновить ссылки на расписание
+    """
+    logger.info("Обновление ссылок на расписание...")
+    Group.delete().execute()
+    driver = webdriver.Chrome()
+    driver.get(BASE_URL + "/schedule")
+    try:
+        WebDriverWait(driver, 15).until(
+            EC.presence_of_element_located(
+                (By.XPATH, '/html/body/div/main/div[3]/div[2]/section[3]/div/div[2]/div[24]/div/div[2]/div/div')
+            )
+        )
+        html = driver.page_source
+    except TimeoutException:
+        logger.error("Страница не загружается")
+        return 1
+    finally:
+        driver.quit()
+    soup = BeautifulSoup(html, "html.parser")
+    departments_list = soup.find_all("div", {"class":"accordion__list"})
+    groups = []
+    for i_department in departments_list:
+        i_department_name = i_department.find("h3", {"class":"accordion__header"}).text
+        groups.extend([
+            {
+                "group_number": i_group.text,
+                "schedule_link": i_group.attrs["href"],
+                "department": i_department_name}
+            for i_group in i_department.find_all("a", {"class": "schedule__group_item-link"})
+        ])
+    Group.insert_many(groups).execute()
+    logger.info("Ссылки на расписание обновлены")
+
+
+def update_schedule() -> None:
     """ Обновление ссылок и расписаний групп """
-    # Обновить ссылки на расписания ####################################################################################
-    if update_links:
-        if not is_full_update:
-            if Department.select().count() == 0:
-                add_departments(url=BASE_URL + "/schedule")
-                add_log(log_message="Added links to departments", log_level="INFO")
-
-            for i_department in Department.select():
-                if i_department.department_name in departments_to_update:
-                    Group.delete().where(Department.department_name == i_department.department_name).execute()
-                    add_groups(url=BASE_URL + i_department.schedule_link, department=i_department.department_name)
-
-        else:
-            add_departments(url=BASE_URL + "/schedule")
-            Group.delete().execute()
-            for i_department in Department.select():
-                if i_department.department_name in departments_to_update:
-                    add_groups(url=BASE_URL + i_department.schedule_link, department=i_department.department_name)
+    logger.info("Обновление расписания...")
+    # Удалить старое расписание ########################################################################################
+    Schedule.delete().where(Group.department.in_(DEPARTMENTS_IN_INDEX))
+    logger.debug("Расписание указанных факультетов/институтов очищено")
 
     # Получить расписания групп ########################################################################################
-    for i_department in departments_to_update:
-        if is_full_update:
-            Schedule.delete().execute()
-        else:
-            Schedule.delete().where(Group.department == i_department)
+    for i_department in DEPARTMENTS_IN_INDEX:
 
-        total_classes = Schedule.select().count()
-        add_log(log_message=f"total_classes -- {total_classes}", log_level="INFO")
-
-        print(f"\n{i_department}:")
+        logger.debug(f'Обновление расписания "{i_department}"...')
         for i_group in Group.select().where(Group.department == i_department):
 
             get_group_schedule(
@@ -47,10 +69,3 @@ def update_schedule(departments_to_update: Tuple, update_links: bool = False, is
                 department_name=i_department,
                 group_number=i_group.group_number
             )
-
-            add_log(log_message=f"total_classes -- {total_classes}", log_level="INFO")
-            if total_classes > Schedule.select().count():
-                total_classes = Schedule.select().count()
-                add_log(log_message=f"Record is removed -- {i_department} -- {i_group.group_number} -- {total_classes}",
-                        log_level="ERROR")
-                raise ValueError(f"Record is removed -- {i_department} -- {i_group.group_number} -- {total_classes}")
