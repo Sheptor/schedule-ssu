@@ -1,3 +1,4 @@
+from utils.misc.init_logger import logger
 from database.init_database import init_database, Schedule, Group
 
 
@@ -8,3 +9,6 @@ def clear_database():
         Group.drop_table()
         Schedule.drop_table()
         init_database()
+        logger.warning("База данных очищена.")
+    else:
+        logger.warning("Отмена очистки.")

@@ -1,8 +1,9 @@
-from utils import DEPARTMENTS_IN_INDEX
+import utils
 from utils.misc.init_logger import logger
+from copy import copy
 
 
-DEPARTMENTS_LIST = (
+DEPARTMENTS_LIST = [
     "Биологический факультет", "Географический факультет", "Геологический факультет",
     "Институт дополнительного профессионального образования", "Институт истории и международных отношений",
     "Институт физики", "Институт филологии и журналистики", "Институт химии",
@@ -15,12 +16,13 @@ DEPARTMENTS_LIST = (
     "Факультет физической культуры и спорта (ПИ)", "Факультет фундаментальной медицины и медицинских технологий",
     "Философский факультет", "Экономический факультет", "Юридический факультет",
     "Геологический колледж", "Колледж радиоэлектроники им. П.Н. Яблочкова"
-)
+]
 
 
 def add_department():
     departments_list_text = "-"*20 + "\nСписок доступных институтов/факультетов:\n"
     departments_list_text += "\n".join("{} ---> {},".format(*k) for k in enumerate(DEPARTMENTS_LIST, start=1))
+    departments_list_text += "\n!all ---> Добавить всё/очистить индекс"
     departments_list_text += "\n!stop ---> Завершить добавление в индекс."
     departments_list_text += "\n" + "-"*20
 
@@ -29,6 +31,14 @@ def add_department():
         department = input("Введите номер института/факультета\n>>>").strip().lower()
         if department == "!stop":
             return
+        if department == "!all":
+            if DEPARTMENTS_LIST == utils.DEPARTMENTS_IN_INDEX:
+                utils.DEPARTMENTS_IN_INDEX = list()
+                logger.info(f"Все факультеты и институты удалены из индекса.")
+            else:
+                utils.DEPARTMENTS_IN_INDEX = copy(DEPARTMENTS_LIST)
+                logger.info(f"Все факультеты и институты добавлены в индекс.")
+            continue
         try:
             department_number = int(department)
         except ValueError:
@@ -39,9 +49,9 @@ def add_department():
             continue
 
         department = DEPARTMENTS_LIST[department_number - 1]
-        if department in DEPARTMENTS_IN_INDEX:
-            DEPARTMENTS_IN_INDEX.remove(department)
-            logger.info(f"{department} удален из индекса. Сейчас в индексе: ({DEPARTMENTS_IN_INDEX})")
+        if department in utils.DEPARTMENTS_IN_INDEX:
+            utils.DEPARTMENTS_IN_INDEX.remove(department)
+            logger.info(f"{department} удален из индекса. Сейчас в индексе: ({utils.DEPARTMENTS_IN_INDEX})")
         else:
-            DEPARTMENTS_IN_INDEX.append(department)
-            logger.info(f"{department} добавлен в индекс. Сейчас в индексе: ({DEPARTMENTS_IN_INDEX})")
+            utils.DEPARTMENTS_IN_INDEX.append(department)
+            logger.info(f"{department} добавлен в индекс. Сейчас в индексе: ({utils.DEPARTMENTS_IN_INDEX})")

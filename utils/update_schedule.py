@@ -56,7 +56,7 @@ def update_schedule() -> None:
     logger.info("Обновление расписания...")
     # Удалить старое расписание ########################################################################################
     Schedule.delete().where(Group.department.in_(DEPARTMENTS_IN_INDEX))
-    logger.debug("Расписание указанных факультетов/институтов очищено")
+    logger.warning("Расписание указанных факультетов/институтов очищено")
 
     # Получить расписания групп ########################################################################################
     for i_department in DEPARTMENTS_IN_INDEX:
@@ -69,3 +69,4 @@ def update_schedule() -> None:
                 department_name=i_department,
                 group_number=i_group.group_number
             )
+    logger.info("Расписание обновлено")
