@@ -31,7 +31,7 @@ class Schedule(BaseModel):
 
     class Meta:
         indexes = (
-            (("weekday", "time", "num", "teacher"), True),
+            (("weekday", "time", "practice", "num", "teacher"), True),
         )
 
     def __str__(self):

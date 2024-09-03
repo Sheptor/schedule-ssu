@@ -4,7 +4,6 @@ import sys
 from bs4 import BeautifulSoup
 from peewee import IntegrityError
 
-from utils.misc.get_status import get_status
 from utils.misc.wait import wait
 from database.init_database import Schedule
 
@@ -105,9 +104,9 @@ def get_group_schedule(
                 Schedule.weekday == i_lesson["weekday"],
                 Schedule.time == i_lesson["time"],
                 Schedule.num == i_lesson["num"],
+                Schedule.practice == i_lesson["practice"],
                 Schedule.teacher == i_lesson["teacher"],
-                not Schedule.groups.like(f"%{group_number}%")
+                ~ Schedule.groups.contains(f"{i_lesson["groups"]}")
             ).execute()
-    get_status(department_name=department_name, group_number=group_number)
     wait()
 

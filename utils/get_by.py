@@ -1,3 +1,4 @@
+import utils
 from utils.misc.init_logger import logger
 from utils.get_by_params.get_by_room import get_by_room
 from utils.get_by_params.get_by_teacher import get_by_teacher
@@ -43,7 +44,15 @@ def get_by_param() -> None:
             continue
 
         func = PARAM_TO_FUNC[parameter_number - 1][1]
-        param_value = input("Введите значение параметра\n>>>")
-
-        func(param_value)
+        if parameter_number == 1:
+            param_value = input("Введите номер корпуса и аудитории через пробел\n>>>")
+            try:
+                building, room = param_value.split()
+                func(building, room)
+            except ValueError:
+                logger.error("Неверный формат аудитории. Введите номер корпуса и аудитории через пробел!")
+                continue
+        else:
+            param_value = input("Введите значение параметра\n>>>")
+            utils.schedule_result = func(param_value)
         return

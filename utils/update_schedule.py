@@ -9,6 +9,7 @@ from . import DEPARTMENTS_IN_INDEX
 from database.init_database import Schedule, Group
 from utils.updade_database.get_group_schedule import get_group_schedule
 from utils.misc.init_logger import logger
+from utils.misc.get_status import Counter
 
 
 BASE_URL: str = "https://www.sgu.ru"
@@ -26,7 +27,7 @@ def update_links():
     try:
         WebDriverWait(driver, 15).until(
             EC.presence_of_element_located(
-                (By.XPATH, '/html/body/div/main/div[3]/div[2]/section[3]/div/div[2]/div[24]/div/div[2]/div/div')
+                (By.XPATH, '/html/body/div/main/div[3]/div[2]/section[3]/div/div[2]/div[1]/div/div[2]/div/div')
             )
         )
         html = driver.page_source
@@ -59,9 +60,11 @@ def update_schedule() -> None:
     logger.warning("Расписание указанных факультетов/институтов очищено")
 
     # Получить расписания групп ########################################################################################
-    for i_department in DEPARTMENTS_IN_INDEX:
+    counter = Counter()
 
+    for i_department in DEPARTMENTS_IN_INDEX:
         logger.debug(f'Обновление расписания "{i_department}"...')
+        counter.index_in_department = 0
         for i_group in Group.select().where(Group.department == i_department):
 
             get_group_schedule(
@@ -69,4 +72,7 @@ def update_schedule() -> None:
                 department_name=i_department,
                 group_number=i_group.group_number
             )
+            counter.current_group += 1
+            counter.index_in_department += 1
+            counter.get_status(department_name=i_department, group_number=i_group.group_number)
     logger.info("Расписание обновлено")
