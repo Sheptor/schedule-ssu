@@ -1,14 +1,15 @@
 from typing import Tuple
-from database.init_database import Group
+from database.init_database import Group, session
 from utils import DEPARTMENTS_IN_INDEX
 from utils.misc.init_logger import logger
+from sqlalchemy import func
 
 
 class Counter:
     def __init__(self):
         self.current_group: int = 0
         self.index_in_department = 0
-        self.total_groups: int = Group.select().where(Group.department.in_(DEPARTMENTS_IN_INDEX)).count()
+        self.total_groups: int = session.query(func.count()).where(Group.department.in_(DEPARTMENTS_IN_INDEX)).scalar()
         self.__max_wait_time = 40
 
 
@@ -28,7 +29,7 @@ class Counter:
     ) -> None:
         """ Вывод информации о текущем статусе работы программы. """
 
-        total_in_department = Group.select().where(Group.department == department_name).count()
+        total_in_department = session.query(func.count()).where(Group.department == department_name).scalar()
         department_percent = round(((self.index_in_department / total_in_department) * 100), 2)
 
         total_percent = round((self.current_group / self.total_groups) * 100, 2)

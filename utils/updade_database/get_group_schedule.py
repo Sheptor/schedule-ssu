@@ -2,10 +2,11 @@ from utils.misc.init_logger import logger
 import requests
 import sys
 from bs4 import BeautifulSoup
-from peewee import IntegrityError
+# from peewee import IntegrityError
+from sqlalchemy.exc import IntegrityError
 
 from utils.misc.wait import wait
-from database.init_database import Schedule
+from database.init_database import Schedule, session
 
 
 WEEKDAYS_LIST = ("Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота")
@@ -79,34 +80,38 @@ def get_group_schedule(
                     other = j_sub_lesson.find("div", {"class": "schedule-table__lesson-uncertain"}).text.strip()
                     if other == "":
                         other = None
-                    group_schedule.append(
-                        {
-                            "weekday": WEEKDAYS_LIST[j_index],
-                            "time": time,
-                            "practice": practice,
-                            "num": num,
-                            "name": name,
-                            "teacher": teacher,
-                            "groups": group_number,
-                            "room": room,
-                            "other": other,
-                            "weekday_id": j_index
-                        }
+                    new_lesson = Schedule(
+                        weekday=WEEKDAYS_LIST[j_index],
+                        time=time,
+                        practice=practice,
+                        num=num,
+                        name=name,
+                        teacher=teacher,
+                        groups=group_number,
+                        room=room,
+                        other=other,
+                        weekday_id=j_index
                     )
+                    group_schedule.append(new_lesson)
 
     for i_lesson in group_schedule:
-        try:
-            Schedule.insert(i_lesson).execute()
-        except IntegrityError:
-            Schedule.update(
-                groups=Schedule.groups + ", " + i_lesson["groups"]
-            ).where(
-                Schedule.weekday == i_lesson["weekday"],
-                Schedule.time == i_lesson["time"],
-                Schedule.num == i_lesson["num"],
-                Schedule.practice == i_lesson["practice"],
-                Schedule.teacher == i_lesson["teacher"],
-                ~ Schedule.groups.contains(f"{i_lesson["groups"]}")
-            ).execute()
+        lesson = session.query(Schedule).where(
+            Schedule.weekday == i_lesson.weekday,
+            Schedule.time == i_lesson.time,
+            Schedule.num == i_lesson.num,
+            Schedule.practice == i_lesson.practice,
+            Schedule.teacher == i_lesson.teacher
+        ).one_or_none()
+        if lesson is None:
+            session.add(i_lesson)
+        elif session.query(
+                Schedule
+        ).where(
+            Schedule.groups.not_like(f"%{i_lesson.groups}%")
+        ).one_or_none is not None:
+            lesson.groups += f", {i_lesson.groups}"
+
+
+    session.commit()
     wait()
 

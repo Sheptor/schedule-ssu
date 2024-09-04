@@ -4,9 +4,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC  # noqa
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
+from sqlalchemy import insert
 
 from . import DEPARTMENTS_IN_INDEX
-from database.init_database import Schedule, Group
+from database.init_database import Group, session, engine, Schedule
 from utils.updade_database.get_group_schedule import get_group_schedule
 from utils.misc.init_logger import logger
 from utils.misc.get_status import Counter
@@ -21,7 +22,8 @@ def update_links():
     Обновить ссылки на расписание
     """
     logger.info("Обновление ссылок на расписание...")
-    Group.delete().execute()
+    session.query(Group).delete()
+    session.commit()
     driver = webdriver.Chrome()
     driver.get(BASE_URL + "/schedule")
     try:
@@ -48,7 +50,9 @@ def update_links():
                 "department": i_department_name}
             for i_group in i_department.find_all("a", {"class": "schedule__group_item-link"})
         ])
-    Group.insert_many(groups).execute()
+
+    new_groups = session.scalars(insert(Group).returning(Group), groups).unique()
+    session.commit()
     logger.info("Ссылки на расписание обновлены")
 
 
@@ -56,7 +60,8 @@ def update_schedule() -> None:
     """ Обновление ссылок и расписаний групп """
     logger.info("Обновление расписания...")
     # Удалить старое расписание ########################################################################################
-    Schedule.delete().where(Group.department.in_(DEPARTMENTS_IN_INDEX))
+    session.query(Schedule).delete()
+    session.commit()
     logger.warning("Расписание указанных факультетов/институтов очищено")
 
     # Получить расписания групп ########################################################################################
@@ -65,7 +70,7 @@ def update_schedule() -> None:
     for i_department in DEPARTMENTS_IN_INDEX:
         logger.debug(f'Обновление расписания "{i_department}"...')
         counter.index_in_department = 0
-        for i_group in Group.select().where(Group.department == i_department):
+        for i_group in session.query(Group).where(Group.department == i_department):
 
             get_group_schedule(
                 url=BASE_URL + i_group.schedule_link,

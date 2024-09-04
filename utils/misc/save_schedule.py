@@ -4,6 +4,8 @@ from openpyxl.styles.borders import Border, Side
 from openpyxl.styles import Alignment
 from openpyxl.utils import get_column_letter
 from openpyxl.styles import PatternFill
+from config_data import BASE_DIR
+from utils.misc.init_logger import logger
 
 from utils.updade_database.get_group_schedule import WEEKDAYS_LIST
 
@@ -18,6 +20,8 @@ practice_to_color = {
     "ЛЕКЦИЯ": "e0ffe0"
 }
 
+if not os.path.exists(os.path.join(BASE_DIR, "results")):
+    os.makedirs(os.path.join(BASE_DIR, "results"))
 
 medium_border = Border(left=Side(style='medium'),
                      right=Side(style='medium'),
@@ -73,7 +77,10 @@ def add_to_xsls(ws, sub_lesson_start_row, j_index, k_sub_lesson):
 
 
 def write_to_excel() -> None:
-    """ Запись полученного расписания в csv-файл. """
+    """ Запись полученного расписания в xlsx-файл. """
+    file_name = input("Введите название файла для сохранения\n>>>")
+    file_name = os.path.join(BASE_DIR, "results", file_name)
+
     wb = Workbook()
     ws = wb.active
     ws.column_dimensions["A"].width = 15
@@ -103,4 +110,5 @@ def write_to_excel() -> None:
                 sub_lesson_start_row += 6
         ws.merge_cells(start_row=start_row, end_row=ws.max_row, start_column=1, end_column=1)
         time_cell.alignment = Alignment(horizontal="center", vertical="center")
-    wb.save("test.xlsx")
+    wb.save(f"{file_name}.xlsx")
+    logger.info(f"saved to {file_name}.xlsx")

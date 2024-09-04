@@ -54,5 +54,5 @@ def get_by_param() -> None:
                 continue
         else:
             param_value = input("Введите значение параметра\n>>>")
-            utils.schedule_result = func(param_value)
+            func(param_value)
         return
