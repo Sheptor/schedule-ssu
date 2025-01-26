@@ -48,7 +48,8 @@ def update_links():
                 "group_number": i_group.text,
                 "schedule_link": i_group.attrs["href"],
                 "department": i_department_name}
-            for i_group in i_department.find_all("a", {"class": "schedule__group_item-link"})
+            for i_group in i_department.find_all("a", href=True)
+            if not i_group.has_attr("class")
         ])
 
     new_groups = session.scalars(insert(Group).returning(Group), groups).unique()
